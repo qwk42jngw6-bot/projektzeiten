@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Projektzeiten">
+  <meta name="theme-color" content="#1e3a5f">
+  <title>Projektzeiten</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #1e3a5f;
+      --primary-light: #2a5298;
+      --accent: #2563eb;
+      --accent-light: #dbeafe;
+      --green: #16a34a;
+      --green-light: #dcfce7;
+      --red: #dc2626;
+      --red-light: #fee2e2;
+      --orange: #d97706;
+      --orange-light: #fef3c7;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --border-focus: #2563eb;
+      --tab-h: 72px;
+      --header-h: 60px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    html, body {
+      height: 100%; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* ===== APP SHELL ===== */
+    #app {
+      display: flex; flex-direction: column;
+      height: 100vh; max-width: 480px; margin: 0 auto;
+      position: relative; overflow: hidden;
+    }
+
+    /* ===== HEADER ===== */
+    #header {
+      background: var(--primary);
+      color: white;
+      padding: calc(var(--safe-top) + 12px) 20px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0; z-index: 10;
+    }
+    #header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
+    #header-date { font-size: 13px; opacity: 0.75; margin-top: 2px; }
+    #header-info { text-align: right; }
+    #header-badge {
+      background: var(--green); color: white;
+      font-size: 11px; font-weight: 600; padding: 3px 8px;
+      border-radius: 20px; display: none;
+    }
+
+    /* ===== CONTENT AREA ===== */
+    #content {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding-bottom: calc(var(--tab-h) + var(--safe-bottom) + 8px);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ===== TAB BAR ===== */
+    #tabbar {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding-bottom: var(--safe-bottom);
+      z-index: 100;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px 4px;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      border: none; background: none; cursor: pointer;
+      color: var(--text-muted); font-size: 10px; font-weight: 500;
+      transition: color 0.15s;
+    }
+    .tab-btn.active { color: var(--accent); }
+    .tab-btn svg { width: 22px; height: 22px; }
+
+    /* ===== SECTIONS ===== */
+    .section { display: none; padding: 16px; }
+    .section.active { display: block; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--card); border-radius: 14px;
+      padding: 16px; margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .card-title {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 12px;
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 13px 20px; border-radius: 12px;
+      border: none; cursor: pointer; font-size: 15px; font-weight: 600;
+      transition: transform 0.1s, opacity 0.1s;
+      -webkit-user-select: none; user-select: none;
+    }
+    .btn:active { transform: scale(0.97); opacity: 0.85; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-success { background: var(--green); color: white; }
+    .btn-danger { background: var(--red); color: white; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-ghost { background: transparent; color: var(--accent); padding: 8px 12px; font-size: 14px; }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 8px; }
+
+    /* ===== TIMER BUTTON ===== */
+    #timer-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; }
+    #timer-btn {
+      width: 130px; height: 130px; border-radius: 50%;
+      border: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--green), #15803d);
+      color: white; font-size: 16px; font-weight: 700;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      box-shadow: 0 6px 24px rgba(22,163,74,0.35);
+      transition: all 0.2s; -webkit-user-select: none; user-select: none;
+    }
+    #timer-btn.running {
+      background: linear-gradient(135deg, var(--red), #b91c1c);
+      box-shadow: 0 6px 24px rgba(220,38,38,0.35);
+    }
+    #timer-btn:active { transform: scale(0.95); }
+    #timer-display { font-size: 26px; font-weight: 700; letter-spacing: 1px; }
+    #timer-label { font-size: 12px; opacity: 0.85; letter-spacing: 0.5px; }
+    #timer-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+    /* ===== FORM ===== */
+    .form-group { margin-bottom: 13px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    input, select, textarea {
+      width: 100%; padding: 12px 14px; border-radius: 10px;
+      border: 1.5px solid var(--border); background: var(--bg);
+      font-size: 16px; color: var(--text); font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+      -webkit-appearance: none; appearance: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--border-focus); background: white; }
+    textarea { resize: none; height: 76px; }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 38px; }
+    .duration-badge {
+      display: inline-block; background: var(--accent-light); color: var(--accent);
+      font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 8px;
+      margin-top: 4px;
+    }
+    .km-amount { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    /* ===== ENTRY LIST ===== */
+    .day-group { margin-bottom: 6px; }
+    .day-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 4px 6px;
+    }
+    .day-header-left { font-size: 13px; font-weight: 700; color: var(--text); }
+    .day-header-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .day-header-right { font-size: 12px; color: var(--text-muted); text-align: right; }
+
+    .entry-card {
+      background: var(--card); border-radius: 12px;
+      padding: 13px 14px; margin-bottom: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .entry-time-col { min-width: 50px; }
+    .entry-time { font-size: 13px; font-weight: 700; color: var(--accent); }
+    .entry-dur { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .entry-main { flex: 1; min-width: 0; }
+    .entry-topic { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .entry-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .chip {
+      font-size: 11px; font-weight: 500; padding: 2px 8px;
+      border-radius: 20px; background: var(--bg); color: var(--text-muted);
+    }
+    .chip-blue { background: var(--accent-light); color: var(--accent); }
+    .chip-green { background: var(--green-light); color: var(--green); }
+    .entry-actions { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+    .icon-btn {
+      width: 32px; height: 32px; border-radius: 8px; border: none;
+      background: var(--bg); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+    }
+    .icon-btn:active { opacity: 0.6; }
+
+    /* ===== MONTH NAV ===== */
+    .month-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 4px 0 8px;
+    }
+    .month-nav-btn {
+      width: 36px; height: 36px; border-radius: 10px; border: none;
+      background: var(--card); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .month-nav-label { font-size: 16px; font-weight: 700; }
+
+    /* ===== EXPORT ===== */
+    .export-stat {
+      display: flex; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .export-stat:last-child { border-bottom: none; }
+    .export-stat-label { font-size: 14px; color: var(--text-muted); }
+    .export-stat-val { font-size: 14px; font-weight: 700; }
+    .export-options { display: flex; gap: 8px; margin-bottom: 14px; }
+    .export-option {
+      flex: 1; padding: 10px; border-radius: 10px; border: 2px solid var(--border);
+      background: var(--card); cursor: pointer; text-align: center;
+      font-size: 13px; font-weight: 500; color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .export-option.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+    /* ===== SETTINGS ===== */
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 15px; }
+    .setting-value { font-size: 15px; color: var(--accent); font-weight: 600; }
+    .project-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .project-item:last-child { border-bottom: none; }
+    .project-name { font-size: 15px; }
+    .add-row { display: flex; gap: 8px; margin-top: 12px; }
+    .add-row input { flex: 1; }
+
+    /* ===== MODAL ===== */
+    #modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 200; display: none; align-items: flex-end; justify-content: center;
+    }
+    #modal-backdrop.open { display: flex; }
+    #modal {
+      background: var(--card); border-radius: 20px 20px 0 0;
+      width: 100%; max-width: 480px; padding: 20px 20px calc(20px + var(--safe-bottom));
+      max-height: 92vh; overflow-y: auto;
+    }
+    .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+
+    /* ===== EMPTY STATE ===== */
+    .empty {
+      text-align: center; padding: 48px 20px;
+      color: var(--text-muted); font-size: 14px;
+    }
+    .empty svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.35; }
+
+    /* ===== TOAST ===== */
+    #toast {
+      position: fixed; top: calc(var(--safe-top) + 70px); left: 50%; transform: translateX(-50%);
+      background: var(--text); color: white; padding: 10px 20px; border-radius: 100px;
+      font-size: 14px; font-weight: 500; z-index: 999;
+      opacity: 0; transition: opacity 0.2s; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ===== MANUAL ENTRY SECTION ===== */
+    #manual-section { display: none; }
+    #manual-section.visible { display: block; }
+    .or-divider { text-align: center; color: var(--text-muted); font-size: 13px; margin: 8px 0; position: relative; }
+    .or-divider::before, .or-divider::after { content: ''; position: absolute; top: 50%; width: calc(50% - 24px); height: 1px; background: var(--border); }
+    .or-divider::before { left: 0; } .or-divider::after { right: 0; }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes pulse { 0%, 100% { box-shadow: 0 6px 24px rgba(220,38,38,0.35); } 50% { box-shadow: 0 6px 32px rgba(220,38,38,0.55); } }
+    #timer-btn.running { animation: pulse 2s infinite; }
+
+    /* ===== SCROLLBAR (desktop) ===== */
+    #content::-webkit-scrollbar { width: 4px; }
+    #content::-webkit-scrollbar-track { background: transparent; }
+    #content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div>
+      <div id="header-title" style="font-size:18px;font-weight:700;">⏱ Projektzeiten</div>
+      <div id="header-date" style="font-size:13px;opacity:0.75;margin-top:2px;"></div>
+    </div>
+    <div id="header-badge"></div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- TAB: ERFASSEN -->
+    <div id="tab-erfassen" class="section active">
+
+      <!-- Timer Card -->
+      <div class="card">
+        <div class="card-title">Zeiterfassung</div>
+        <div id="timer-wrap">
+          <button id="timer-btn" onclick="toggleTimer()">
+            <span id="timer-display">00:00:00</span>
+            <span id="timer-label">STARTEN</span>
+          </button>
+          <div id="timer-hint">Tippe zum Starten der Zeiterfassung</div>
+        </div>
+      </div>
+
+      <div class="or-divider">oder manuell erfassen</div>
+
+      <!-- Manual / Form -->
+      <div class="card">
+        <div class="card-title">Eintrag erfassen</div>
+        <div id="entry-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Datum</label>
+              <input type="date" id="f-date">
+            </div>
+            <div class="form-group" style="display:flex;flex-direction:column;">
+              <label>Dauer</label>
+              <div id="duration-display" class="duration-badge" style="margin-top:auto;">—</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Startzeit</label>
+              <input type="time" id="f-start" oninput="calcDuration()">
+            </div>
+            <div class="form-group">
+              <label>Endzeit</label>
+              <input type="time" id="f-end" oninput="calcDuration()">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Thema</label>
+            <input type="text" id="f-topic" placeholder="z. B. Dachkontrolle" list="topic-suggestions" autocomplete="off">
+            <datalist id="topic-suggestions"></datalist>
+          </div>
+          <div class="form-group">
+            <label>Kunde / Projekt</label>
+            <div style="display:flex;gap:8px;">
+              <select id="f-project" style="flex:1;">
+                <option value="">— bitte wählen —</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" style="white-space:nowrap;padding:0 12px;" onclick="openAddProject()">+ Neu</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Kategorie</label>
+            <select id="f-category" onchange="saveLastCategory()">
+              <option value="">— bitte wählen —</option>
+              <option>Begehung</option>
+              <option>Verwaltung</option>
+              <option>Fahrt</option>
+              <option>Meeting</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Kilometer</label>
+            <input type="number" id="f-km" placeholder="0" min="0" step="0.1" oninput="updateKmAmount()">
+            <div id="km-amount" class="km-amount"></div>
+          </div>
+          <div class="form-group">
+            <label>Notiz (optional)</label>
+            <textarea id="f-notes" placeholder="Zusätzliche Informationen…"></textarea>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="saveEntry()" style="margin-top:4px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Eintrag speichern
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: EINTRÄGE -->
+    <div id="tab-eintraege" class="section">
+      <div class="month-nav">
+        <button class="month-nav-btn" onclick="changeMonth(-1)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div id="month-label" class="month-nav-label"></div>
+        <button class="month-nav-btn" onclick="changeMonth(1)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+      <div id="entry-list"></div>
+    </div>
+
+    <!-- TAB: EXPORT -->
+    <div id="tab-export" class="section">
+      <div class="card">
+        <div class="card-title">Zeitraum</div>
+        <div class="export-options" id="export-range-opts">
+          <div class="export-option selected" data-range="month" onclick="selectExportRange('month', this)">Aktueller Monat</div>
+          <div class="export-option" data-range="all" onclick="selectExportRange('all', this)">Alle Daten</div>
+          <div class="export-option" data-range="custom" onclick="selectExportRange('custom', this)">Individuell</div>
+        </div>
+        <div id="custom-range" style="display:none;">
+          <div class="form-row" style="margin-bottom:0;">
+            <div class="form-group">
+              <label>Von</label>
+              <input type="date" id="export-from">
+            </div>
+            <div class="form-group">
+              <label>Bis</label>
+              <input type="date" id="export-to">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="export-stats-card">
+        <div class="card-title">Vorschau</div>
+        <div id="export-stats"></div>
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="doExportCSV()" style="margin-bottom:10px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Als CSV exportieren
+      </button>
+      <button class="btn btn-secondary btn-full" onclick="doExportJSON()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Backup als JSON
+      </button>
+    </div>
+
+    <!-- TAB: EINSTELLUNGEN -->
+    <div id="tab-einstellungen" class="section">
+      <div class="card">
+        <div class="card-title">Projekte / Kunden</div>
+        <div id="project-list"></div>
+        <div class="add-row">
+          <input type="text" id="new-project-input" placeholder="Neues Projekt eingeben…" onkeydown="if(event.key==='Enter')addProject()">
+          <button class="btn btn-primary btn-sm" onclick="addProject()">+ Hinzufügen</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Einstellungen</div>
+        <div class="setting-row">
+          <span class="setting-label">Kilometerpauschale</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="number" id="km-rate-input" step="0.01" min="0" style="width:80px;text-align:right;padding:8px;" onchange="updateKmRate()">
+            <span style="font-size:14px;color:var(--text-muted);">€/km</span>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Gesamt Einträge</span>
+          <span id="stat-total" class="setting-value">—</span>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Gesamt Kilometer</span>
+          <span id="stat-km" class="setting-value">—</span>
+        </div>
+        <div class="setting-row" style="border-bottom:none;">
+          <span class="setting-label">Gesamt Stunden</span>
+          <span id="stat-hours" class="setting-value">—</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Daten importieren</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Backup (JSON) importieren und alle bisherigen Einträge wiederherstellen.</p>
+        <button class="btn btn-secondary btn-full" onclick="importJSON()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          JSON importieren
+        </button>
+        <input type="file" id="json-import-input" accept=".json" style="display:none;" onchange="handleJSONImport(event)">
+      </div>
+
+      <div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:12px;">
+        Projektzeiten v1.0 • Mario Schuckert
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TAB BAR -->
+  <div id="tabbar">
+    <button class="tab-btn active" id="tb-erfassen" onclick="switchTab('erfassen')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Erfassen
+    </button>
+    <button class="tab-btn" id="tb-eintraege" onclick="switchTab('eintraege')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Einträge
+    </button>
+    <button class="tab-btn" id="tb-export" onclick="switchTab('export')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </button>
+    <button class="tab-btn" id="tb-einstellungen" onclick="switchTab('einstellungen')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 19.07l-1.41 1.41M19.07 19.07l-1.41-1.41M4.93 4.93l1.41 1.41M21 12h-2M5 12H3M12 21v-2M12 5V3"/></svg>
+      Einstellungen
+    </button>
+  </div>
+
+  <!-- MODAL (Eintrag bearbeiten / Projekt hinzufügen) -->
+  <div id="modal-backdrop" onclick="closeModalBackdrop(event)">
+    <div id="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="modal-title">Eintrag bearbeiten</div>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast"></div>
+</div>
+
+<script>
+// ==================== STATE ====================
+const DAYS = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+const MONTHS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const CATEGORIES = ['Begehung','Verwaltung','Fahrt','Meeting'];
+
+let state = {
+  entries: [],
+  projects: [],
+  settings: { kmRate: 0.30 },
+  timer: { active: false, startTime: null, intervalId: null },
+  currentTab: 'erfassen',
+  editingId: null,
+  exportRange: 'month',
+  listMonth: new Date()
+};
+
+// ==================== STORAGE ====================
+function load() {
+  state.entries = JSON.parse(localStorage.getItem('pz_entries') || '[]');
+  state.projects = JSON.parse(localStorage.getItem('pz_projects') || '[]');
+  const s = JSON.parse(localStorage.getItem('pz_settings') || 'null');
+  if (s) state.settings = { ...state.settings, ...s };
+  const timer = JSON.parse(localStorage.getItem('pz_timer') || 'null');
+  if (timer && timer.active) {
+    state.timer.active = true;
+    state.timer.startTime = timer.startTime;
+    startTimerDisplay();
+    updateTimerBtn(true);
+  }
+}
+function saveEntries() { localStorage.setItem('pz_entries', JSON.stringify(state.entries)); }
+function saveProjects() { localStorage.setItem('pz_projects', JSON.stringify(state.projects)); }
+function saveSettings() { localStorage.setItem('pz_settings', JSON.stringify(state.settings)); }
+function saveTimerState() { localStorage.setItem('pz_timer', JSON.stringify({ active: state.timer.active, startTime: state.timer.startTime })); }
+
+// ==================== INIT ====================
+function init() {
+  load();
+  updateHeaderDate();
+  prefillForm();
+  renderProjectSelect();
+  updateTopicSuggestions();
+  renderSettingsTab();
+  setInterval(updateHeaderDate, 30000);
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
+function updateHeaderDate() {
+  const now = new Date();
+  document.getElementById('header-date').textContent =
+    DAYS[now.getDay()] + ', ' + now.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+// ==================== TABS ====================
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('tb-' + tab).classList.add('active');
+  state.currentTab = tab;
+  if (tab === 'eintraege') renderEntryList();
+  if (tab === 'export') renderExportPreview();
+  if (tab === 'einstellungen') renderSettingsTab();
+}
+
+// ==================== TIMER ====================
+function toggleTimer() {
+  if (!state.timer.active) {
+    state.timer.active = true;
+    state.timer.startTime = Date.now();
+    saveTimerState();
+    startTimerDisplay();
+    updateTimerBtn(true);
+    showToast('Timer gestartet');
+  } else {
+    const startTime = new Date(state.timer.startTime);
+    const endTime = new Date();
+    state.timer.active = false;
+    clearInterval(state.timer.intervalId);
+    state.timer.intervalId = null;
+    saveTimerState();
+    updateTimerBtn(false);
+    document.getElementById('timer-display').textContent = '00:00:00';
+    // Pre-fill form
+    document.getElementById('f-date').value = toDateInput(startTime);
+    document.getElementById('f-start').value = toTimeInput(startTime);
+    document.getElementById('f-end').value = toTimeInput(endTime);
+    calcDuration();
+    showToast('Timer gestoppt – Eintrag ausfüllen');
+    document.getElementById('f-topic').focus();
+  }
+}
+
+function startTimerDisplay() {
+  state.timer.intervalId = setInterval(() => {
+    const elapsed = Date.now() - state.timer.startTime;
+    const h = Math.floor(elapsed / 3600000).toString().padStart(2, '0');
+    const m = Math.floor((elapsed % 3600000) / 60000).toString().padStart(2, '0');
+    const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+    document.getElementById('timer-display').textContent = `${h}:${m}:${s}`;
+  }, 1000);
+}
+
+function updateTimerBtn(running) {
+  const btn = document.getElementById('timer-btn');
+  const lbl = document.getElementById('timer-label');
+  const hint = document.getElementById('timer-hint');
+  if (running) {
+    btn.classList.add('running');
+    lbl.textContent = 'STOPPEN';
+    hint.textContent = 'Tippe zum Stoppen der Zeiterfassung';
+  } else {
+    btn.classList.remove('running');
+    lbl.textContent = 'STARTEN';
+    hint.textContent = 'Tippe zum Starten der Zeiterfassung';
+  }
+}
+
+// ==================== FORM ====================
+function prefillForm() {
+  document.getElementById('f-date').value = toDateInput(new Date());
+  // restore last category
+  const lastCat = localStorage.getItem('pz_last_category') || '';
+  if (lastCat) document.getElementById('f-category').value = lastCat;
+  // restore last km
+  const lastKm = localStorage.getItem('pz_last_km') || '';
+  if (lastKm) { document.getElementById('f-km').value = lastKm; updateKmAmount(); }
+  document.getElementById('km-rate-input').value = state.settings.kmRate;
+}
+
+function saveLastCategory() {
+  localStorage.setItem('pz_last_category', document.getElementById('f-category').value);
+}
+
+function calcDuration() {
+  const s = document.getElementById('f-start').value;
+  const e = document.getElementById('f-end').value;
+  const el = document.getElementById('duration-display');
+  if (s && e) {
+    const mins = timeDiffMins(s, e);
+    if (mins > 0) {
+      el.textContent = minsToHHMM(mins);
+      return mins;
+    }
+  }
+  el.textContent = '—';
+  return 0;
+}
+
+function updateKmAmount() {
+  const km = parseFloat(document.getElementById('f-km').value) || 0;
+  const rate = state.settings.kmRate;
+  const el = document.getElementById('km-amount');
+  if (km > 0) {
+    el.textContent = `= ${(km * rate).toFixed(2).replace('.',',')} € (${rate.toFixed(2).replace('.',',')} €/km)`;
+  } else {
+    el.textContent = '';
+  }
+}
+
+function updateKmRate() {
+  const val = parseFloat(document.getElementById('km-rate-input').value);
+  if (!isNaN(val) && val >= 0) {
+    state.settings.kmRate = val;
+    saveSettings();
+    updateKmAmount();
+    showToast('Kilometerrate gespeichert');
+  }
+}
+
+function resetForm() {
+  document.getElementById('f-topic').value = '';
+  document.getElementById('f-project').value = '';
+  document.getElementById('f-km').value = '';
+  document.getElementById('f-notes').value = '';
+  document.getElementById('f-start').value = '';
+  document.getElementById('f-end').value = '';
+  document.getElementById('f-date').value = toDateInput(new Date());
+  document.getElementById('duration-display').textContent = '—';
+  document.getElementById('km-amount').textContent = '';
+  state.editingId = null;
+}
+
+function saveEntry() {
+  const date = document.getElementById('f-date').value;
+  const start = document.getElementById('f-start').value;
+  const end = document.getElementById('f-end').value;
+  const topic = document.getElementById('f-topic').value.trim();
+  const project = document.getElementById('f-project').value;
+  const category = document.getElementById('f-category').value;
+  const km = parseFloat(document.getElementById('f-km').value) || 0;
+  const notes = document.getElementById('f-notes').value.trim();
+
+  if (!date || !start || !end) { showToast('⚠️ Datum, Start- und Endzeit sind Pflichtfelder'); return; }
+  if (!topic) { showToast('⚠️ Bitte ein Thema eingeben'); return; }
+  const mins = timeDiffMins(start, end);
+  if (mins <= 0) { showToast('⚠️ Endzeit muss nach Startzeit liegen'); return; }
+  if (mins > 600) { showToast('⚠️ Dauer über 10h – bitte prüfen'); return; }
+
+  const entry = {
+    id: state.editingId || Date.now().toString(),
+    date, start, end,
+    duration: mins,
+    topic, project, category, km, notes
+  };
+
+  if (state.editingId) {
+    const idx = state.entries.findIndex(e => e.id === state.editingId);
+    if (idx >= 0) state.entries[idx] = entry;
+  } else {
+    state.entries.push(entry);
+  }
+  state.entries.sort((a,b) => (a.date + a.start).localeCompare(b.date + b.start));
+  saveEntries();
+
+  // remember last km
+  if (km > 0) localStorage.setItem('pz_last_km', km);
+
+  updateTopicSuggestions();
+  resetForm();
+  prefillForm();
+  closeModal();
+  showToast(state.editingId ? 'Eintrag aktualisiert ✓' : 'Eintrag gespeichert ✓');
+
+  // Update badge
+  const badge = document.getElementById('header-badge');
+  const todayCount = state.entries.filter(e => e.date === toDateInput(new Date())).length;
+  if (todayCount > 0) {
+    badge.textContent = todayCount + ' heute';
+    badge.style.display = 'inline-block';
+  }
+}
+
+// ==================== ENTRY LIST ====================
+function renderEntryList() {
+  const mn = state.listMonth;
+  const year = mn.getFullYear();
+  const month = mn.getMonth();
+  document.getElementById('month-label').textContent = MONTHS[month] + ' ' + year;
+
+  const filtered = state.entries.filter(e => {
+    const d = new Date(e.date);
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+
+  const list = document.getElementById('entry-list');
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><p>Keine Einträge in diesem Monat</p></div>`;
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  filtered.forEach(e => { if (!groups[e.date]) groups[e.date] = []; groups[e.date].push(e); });
+
+  list.innerHTML = '';
+  Object.keys(groups).sort((a,b) => b.localeCompare(a)).forEach(date => {
+    const entries = groups[date];
+    const dayTotal = entries.reduce((s,e) => s + e.duration, 0);
+    const kmTotal = entries.reduce((s,e) => s + (e.km || 0), 0);
+    const d = new Date(date + 'T00:00:00');
+    const dayName = DAYS[d.getDay()];
+    const dateStr = d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
+
+    const group = document.createElement('div');
+    group.className = 'day-group';
+    let entryHTML = entries.map(e => `
+      <div class="entry-card">
+        <div class="entry-time-col">
+          <div class="entry-time">${e.start}</div>
+          <div class="entry-dur">${minsToHHMM(e.duration)}</div>
+        </div>
+        <div class="entry-main">
+          <div class="entry-topic">${esc(e.topic)}</div>
+          <div class="entry-meta">
+            ${e.project ? `<span class="chip chip-blue">${esc(e.project)}</span>` : ''}
+            ${e.category ? `<span class="chip">${esc(e.category)}</span>` : ''}
+            ${e.km ? `<span class="chip chip-green">🚗 ${e.km} km</span>` : ''}
+          </div>
+          ${e.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${esc(e.notes)}</div>` : ''}
+        </div>
+        <div class="entry-actions">
+          <button class="icon-btn" onclick="editEntry('${e.id}')" title="Bearbeiten">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn" onclick="duplicateEntry('${e.id}')" title="Duplizieren">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <button class="icon-btn" onclick="deleteEntry('${e.id}')" title="Löschen" style="color:var(--red);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>
+      </div>
+    `).join('');
+
+    group.innerHTML = `
+      <div class="day-header">
+        <div class="day-header-left">${dayName}<div class="day-header-sub">${dateStr}</div></div>
+        <div class="day-header-right">${minsToHHMM(dayTotal)}${kmTotal > 0 ? ' · ' + kmTotal + ' km' : ''}</div>
+      </div>
+      ${entryHTML}
+    `;
+    list.appendChild(group);
+  });
+}
+
+function changeMonth(dir) {
+  state.listMonth = new Date(state.listMonth.getFullYear(), state.listMonth.getMonth() + dir, 1);
+  renderEntryList();
+}
+
+// ==================== EDIT / DELETE / DUPLICATE ====================
+function editEntry(id) {
+  const entry = state.entries.find(e => e.id === id);
+  if (!entry) return;
+  state.editingId = id;
+
+  document.getElementById('f-date').value = entry.date;
+  document.getElementById('f-start').value = entry.start;
+  document.getElementById('f-end').value = entry.end;
+  document.getElementById('f-topic').value = entry.topic;
+  document.getElementById('f-project').value = entry.project || '';
+  document.getElementById('f-category').value = entry.category || '';
+  document.getElementById('f-km').value = entry.km || '';
+  document.getElementById('f-notes').value = entry.notes || '';
+  calcDuration();
+  updateKmAmount();
+  switchTab('erfassen');
+  window.scrollTo(0, 0);
+  showToast('Eintrag wird bearbeitet');
+}
+
+function deleteEntry(id) {
+  if (!confirm('Diesen Eintrag wirklich löschen?')) return;
+  state.entries = state.entries.filter(e => e.id !== id);
+  saveEntries();
+  renderEntryList();
+  showToast('Eintrag gelöscht');
+}
+
+function duplicateEntry(id) {
+  const entry = state.entries.find(e => e.id === id);
+  if (!entry) return;
+  const newEntry = { ...entry, id: Date.now().toString(), date: toDateInput(new Date()) };
+  state.entries.push(newEntry);
+  state.entries.sort((a,b) => (a.date + a.start).localeCompare(b.date + b.start));
+  saveEntries();
+  renderEntryList();
+  showToast('Eintrag dupliziert (auf heute)');
+}
+
+// ==================== PROJECTS ====================
+function renderProjectSelect() {
+  const sel = document.getElementById('f-project');
+  const val = sel.value;
+  sel.innerHTML = '<option value="">— bitte wählen —</option>';
+  state.projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p; opt.textContent = p;
+    sel.appendChild(opt);
+  });
+  sel.value = val;
+}
+
+function addProject() {
+  const input = document.getElementById('new-project-input');
+  const name = input.value.trim();
+  if (!name) { showToast('Bitte einen Namen eingeben'); return; }
+  if (state.projects.includes(name)) { showToast('Projekt bereits vorhanden'); return; }
+  state.projects.push(name);
+  state.projects.sort();
+  saveProjects();
+  input.value = '';
+  renderProjectSelect();
+  renderProjectList();
+  showToast('Projekt hinzugefügt ✓');
+}
+
+function deleteProject(name) {
+  if (!confirm(`Projekt "${name}" wirklich löschen?`)) return;
+  state.projects = state.projects.filter(p => p !== name);
+  saveProjects();
+  renderProjectSelect();
+  renderProjectList();
+  showToast('Projekt gelöscht');
+}
+
+function openAddProject() {
+  switchTab('einstellungen');
+  setTimeout(() => document.getElementById('new-project-input').focus(), 100);
+}
+
+function renderProjectList() {
+  const el = document.getElementById('project-list');
+  if (state.projects.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:8px 0;">Noch keine Projekte angelegt.</div>';
+    return;
+  }
+  el.innerHTML = state.projects.map(p => `
+    <div class="project-item">
+      <span class="project-name">${esc(p)}</span>
+      <button class="icon-btn" onclick="deleteProject('${esc(p).replace(/'/g,"\\'")}')" style="color:var(--red);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
+    </div>
+  `).join('');
+}
+
+// ==================== SETTINGS TAB ====================
+function renderSettingsTab() {
+  renderProjectList();
+  document.getElementById('km-rate-input').value = state.settings.kmRate;
+  const totalMin = state.entries.reduce((s,e) => s + e.duration, 0);
+  const totalKm = state.entries.reduce((s,e) => s + (e.km || 0), 0);
+  document.getElementById('stat-total').textContent = state.entries.length;
+  document.getElementById('stat-km').textContent = totalKm.toFixed(1) + ' km';
+  document.getElementById('stat-hours').textContent = minsToHHMM(totalMin) + ' h';
+}
+
+// ==================== TOPIC SUGGESTIONS ====================
+function updateTopicSuggestions() {
+  const dl = document.getElementById('topic-suggestions');
+  const topics = [...new Set(state.entries.map(e => e.topic).filter(Boolean))].sort();
+  dl.innerHTML = topics.map(t => `<option value="${esc(t)}">`).join('');
+}
+
+// ==================== EXPORT ====================
+let exportRangeMode = 'month';
+
+function selectExportRange(mode, el) {
+  document.querySelectorAll('.export-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  exportRangeMode = mode;
+  document.getElementById('custom-range').style.display = mode === 'custom' ? 'block' : 'none';
+  renderExportPreview();
+}
+
+function getExportEntries() {
+  if (exportRangeMode === 'all') return state.entries;
+  if (exportRangeMode === 'month') {
+    const now = new Date();
+    return state.entries.filter(e => {
+      const d = new Date(e.date);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
+  }
+  if (exportRangeMode === 'custom') {
+    const from = document.getElementById('export-from').value;
+    const to = document.getElementById('export-to').value;
+    if (!from || !to) return state.entries;
+    return state.entries.filter(e => e.date >= from && e.date <= to);
+  }
+  return state.entries;
+}
+
+function renderExportPreview() {
+  const entries = getExportEntries();
+  const totalMin = entries.reduce((s,e) => s + e.duration, 0);
+  const totalKm = entries.reduce((s,e) => s + (e.km || 0), 0);
+  const kmAmount = totalKm * state.settings.kmRate;
+  document.getElementById('export-stats').innerHTML = `
+    <div class="export-stat"><span class="export-stat-label">Einträge</span><span class="export-stat-val">${entries.length}</span></div>
+    <div class="export-stat"><span class="export-stat-label">Gesamtstunden</span><span class="export-stat-val">${minsToHHMM(totalMin)} h</span></div>
+    <div class="export-stat"><span class="export-stat-label">Gesamtkilometer</span><span class="export-stat-val">${totalKm.toFixed(1)} km</span></div>
+    <div class="export-stat"><span class="export-stat-label">Km-Betrag</span><span class="export-stat-val">${kmAmount.toFixed(2).replace('.',',')} €</span></div>
+  `;
+}
+
+function doExportCSV() {
+  const entries = getExportEntries();
+  if (entries.length === 0) { showToast('Keine Einträge zum Exportieren'); return; }
+
+  const header = 'Datum;Wochentag;Start;Ende;Dauer (Min);Arbeitszeit;Kunde/Projekt;Thema;Kategorie;Kilometer;Km-Betrag (€);Kommentar;Notiz';
+  const rows = entries.map(e => {
+    const d = new Date(e.date + 'T00:00:00');
+    const datum = d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const wochentag = DAYS[d.getDay()];
+    const kmBetrag = ((e.km || 0) * state.settings.kmRate).toFixed(2).replace('.',',');
+    const kommentar = [e.topic, e.notes].filter(Boolean).join(' | ');
+    return [
+      datum, wochentag, e.start, e.end, e.duration, minsToHHMM(e.duration),
+      e.project || '', e.topic || '', e.category || '',
+      (e.km || 0).toString().replace('.',','), kmBetrag,
+      kommentar, e.notes || ''
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(';');
+  });
+
+  const csv = '\uFEFF' + header + '\n' + rows.join('\n'); // BOM for Excel
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const now = new Date();
+  const filename = `Projektzeiten_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}.csv`;
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`CSV exportiert (${entries.length} Einträge)`);
+}
+
+function doExportJSON() {
+  const data = { entries: state.entries, projects: state.projects, settings: state.settings, exported: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'Projektzeiten_Backup.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Backup gespeichert ✓');
+}
+
+function importJSON() {
+  document.getElementById('json-import-input').click();
+}
+
+function handleJSONImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!confirm(`${data.entries?.length || 0} Einträge importieren? Bestehende Daten bleiben erhalten.`)) return;
+      if (data.entries) {
+        const existing = new Set(state.entries.map(e => e.id));
+        const newEntries = data.entries.filter(e => !existing.has(e.id));
+        state.entries = [...state.entries, ...newEntries];
+        state.entries.sort((a,b) => (a.date + a.start).localeCompare(b.date + b.start));
+        saveEntries();
+      }
+      if (data.projects) {
+        const merged = [...new Set([...state.projects, ...data.projects])].sort();
+        state.projects = merged;
+        saveProjects();
+        renderProjectSelect();
+      }
+      renderSettingsTab();
+      showToast(`${data.entries?.length || 0} Einträge importiert ✓`);
+    } catch(err) { showToast('Fehler beim Importieren – ungültige Datei'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ==================== MODAL ====================
+function openModal(title, content) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-content').innerHTML = content;
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+}
+
+function closeModalBackdrop(e) {
+  if (e.target === document.getElementById('modal-backdrop')) closeModal();
+}
+
+// ==================== TOAST ====================
+let toastTimeout;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ==================== UTILS ====================
+function toDateInput(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function toTimeInput(d) {
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function timeDiffMins(start, end) {
+  const [sh,sm] = start.split(':').map(Number);
+  const [eh,em] = end.split(':').map(Number);
+  return (eh*60+em) - (sh*60+sm);
+}
+function minsToHHMM(mins) {
+  const h = Math.floor(Math.abs(mins) / 60).toString().padStart(2,'0');
+  const m = (Math.abs(mins) % 60).toString().padStart(2,'0');
+  return `${h}:${m}`;
+}
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ==================== START ====================
+init();
+</script>
+</body>
+</html>
